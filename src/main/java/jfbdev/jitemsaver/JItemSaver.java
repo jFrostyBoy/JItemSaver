@@ -11,7 +11,12 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import com.ssomar.score.api.executableitems.ExecutableItemsAPI;
+import com.ssomar.score.api.executableitems.config.ExecutableItemsManagerInterface;
+import com.ssomar.score.api.executableitems.config.ExecutableItemInterface;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -23,12 +28,33 @@ public final class JItemSaver extends JavaPlugin implements Listener {
     private String msgReload;
     private String msgSaved;
 
+    private boolean hasExecutableItems = false;
+    private ExecutableItemsManagerInterface eiManager = null;
+
     @Override
     public void onEnable() {
         saveDefaultConfig();
         loadConfigValues();
+        hookExecutableItems();
         getServer().getPluginManager().registerEvents(this, this);
         getLogger().info("JItemSaver включён");
+        if (hasExecutableItems) {
+            getLogger().info("JItemSaver → ExecutableItems подключён");
+        }
+    }
+
+    private void hookExecutableItems() {
+        Plugin eiPlugin = getServer().getPluginManager().getPlugin("ExecutableItems");
+        if (eiPlugin != null && eiPlugin.isEnabled()) {
+            try {
+                Class.forName("com.ssomar.score.api.executableitems.ExecutableItemsAPI");
+                eiManager = ExecutableItemsAPI.getExecutableItemsManager();
+                hasExecutableItems = true;
+            } catch (ClassNotFoundException | NoClassDefFoundError e) {
+                getLogger().warning("ExecutableItems найден, но API недоступен");
+                hasExecutableItems = false;
+            }
+        }
     }
 
     private void loadConfigValues() {
@@ -43,7 +69,6 @@ public final class JItemSaver extends JavaPlugin implements Listener {
         List<String> list = cfg.getStringList("itemsaver-list");
         for (String line : list) {
             if (line == null || line.trim().isEmpty()) continue;
-
             SavedItemMatcher matcher = SavedItemMatcher.fromString(line.trim());
             if (matcher != null) {
                 savedItems.add(matcher);
@@ -78,9 +103,19 @@ public final class JItemSaver extends JavaPlugin implements Listener {
 
         List<ItemStack> toKeep = new ArrayList<>();
 
-        for (ItemStack item : p.getInventory().getContents()) {
+        ItemStack[] contents = p.getInventory().getContents();
+
+        for (int i = 0; i < contents.length; i++) {
+            ItemStack item = contents[i];
             if (item == null || item.getType() == Material.AIR) continue;
-            if (shouldKeep(item)) {
+
+            String slotType = (i == 39) ? "HEAD" :
+                    (i == 38) ? "CHEST" :
+                            (i == 37) ? "LEGS" :
+                                    (i == 36) ? "FEET" :
+                                            (i == 40) ? "OFFHAND" : "INVENTORY";
+
+            if (shouldKeep(item, slotType)) {
                 toKeep.add(item.clone());
             }
         }
@@ -101,9 +136,11 @@ public final class JItemSaver extends JavaPlugin implements Listener {
         p.sendMessage(message);
     }
 
-    private boolean shouldKeep(ItemStack item) {
+    private boolean shouldKeep(ItemStack item, String slotType) {
+        if (item == null) return false;
+
         for (SavedItemMatcher matcher : savedItems) {
-            if (matcher.matches(item)) return true;
+            if (matcher.matches(item, slotType, this)) return true;
         }
         return false;
     }
@@ -113,23 +150,50 @@ public final class JItemSaver extends JavaPlugin implements Listener {
     }
 
     private static class SavedItemMatcher {
+
         private final Material material;
         private final Map<Enchantment, Integer> requiredEnchants;
+        private final String eiId;
+        private final boolean isEiCustom;
+        private final String requiredSlot;
 
-        private SavedItemMatcher(Material material, Map<Enchantment, Integer> enchants) {
-            this.material = material;
-            this.requiredEnchants = enchants;
+        private SavedItemMatcher(Material mat, Map<Enchantment, Integer> enchants, String eiId, boolean isCustom, String slot) {
+            this.material = mat;
+            this.requiredEnchants = enchants != null ? enchants : new HashMap<>();
+            this.eiId = eiId;
+            this.isEiCustom = isCustom;
+            this.requiredSlot = slot;
         }
 
         static SavedItemMatcher fromString(String s) {
-            String[] parts = s.split(";", 2);
+            String line = s.trim();
+            String slot = null;
+
+            int lastColon = line.lastIndexOf(':');
+            if (lastColon > 0) {
+                String potentialSlot = line.substring(lastColon + 1).trim().toUpperCase();
+                if (potentialSlot.equals("HEAD") || potentialSlot.equals("CHEST") ||
+                        potentialSlot.equals("LEGS") || potentialSlot.equals("FEET") ||
+                        potentialSlot.equals("OFFHAND")) {
+                    slot = potentialSlot;
+                    line = line.substring(0, lastColon).trim();
+                }
+            }
+
+            if (line.startsWith("CUSTOM:")) {
+                String id = line.substring("CUSTOM:".length()).trim();
+                if (id.isEmpty()) return null;
+                return new SavedItemMatcher(null, null, id, true, slot);
+            }
+
+            String[] parts = line.split(";", 2);
             String matName = parts[0].trim().toUpperCase();
 
             Material mat;
             try {
                 mat = Material.valueOf(matName);
             } catch (IllegalArgumentException e) {
-                return null;
+                return new SavedItemMatcher(null, null, line, true, slot);
             }
 
             Map<Enchantment, Integer> enchants = new HashMap<>();
@@ -157,11 +221,29 @@ public final class JItemSaver extends JavaPlugin implements Listener {
                 }
             }
 
-            return new SavedItemMatcher(mat, enchants);
+            return new SavedItemMatcher(mat, enchants, null, false, slot);
         }
 
-        boolean matches(ItemStack item) {
-            if (item == null || item.getType() != material) return false;
+        boolean matches(ItemStack item, String currentSlot, JItemSaver plugin) {
+            if (item == null) return false;
+
+            if (requiredSlot != null && !requiredSlot.equals(currentSlot)) {
+                return false;
+            }
+
+            if (isEiCustom) {
+                if (!plugin.hasExecutableItems || plugin.eiManager == null) return false;
+
+                Optional<ExecutableItemInterface> eiOpt = plugin.eiManager.getExecutableItem(item);
+
+                if (eiOpt.isPresent()) {
+                    String realId = eiOpt.get().getId();
+                    return realId != null && realId.equalsIgnoreCase(eiId);
+                }
+                return false;
+            }
+
+            if (item.getType() != material) return false;
 
             if (requiredEnchants.isEmpty()) return true;
 
@@ -171,7 +253,6 @@ public final class JItemSaver extends JavaPlugin implements Listener {
             for (Map.Entry<Enchantment, Integer> entry : requiredEnchants.entrySet()) {
                 Enchantment e = entry.getKey();
                 int reqLevel = entry.getValue();
-
                 if (!meta.hasEnchant(e) || meta.getEnchantLevel(e) < reqLevel) return false;
             }
 

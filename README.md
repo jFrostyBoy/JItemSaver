@@ -37,9 +37,9 @@ itemsaver-list:
   - Название чара пишется в `ВЕРХНЕМ` регистре
   - Уровень указывается после `:`
 
-<img width="654" height="66" alt="Знімок екрана з 2026-01-20 20-45-15" src="https://github.com/user-attachments/assets/901e002a-4c6d-47bd-944c-b4ebc749d53b" />
-
 ### Команды
 | Команда      | Описание             | Право               | По умолчанию |
 |--------------|----------------------|---------------------|--------------|
 | `/jisreload` | Перезагрузка плагина | `jitemsaver.reload` | OP           |
+
+<img width="654" height="66" alt="Знімок екрана з 2026-01-20 20-45-15" src="https://github.com/user-attachments/assets/901e002a-4c6d-47bd-944c-b4ebc749d53b" />

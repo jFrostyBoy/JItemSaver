@@ -6,7 +6,7 @@
 
     <groupId>jfbdev</groupId>
     <artifactId>JItemSaver</artifactId>
-    <version>v1.0</version>
+    <version>v1.1</version>
     <packaging>jar</packaging>
 
     <name>JItemSaver</name>
@@ -22,7 +22,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
+                <version>3.13.0</version>
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
@@ -31,7 +31,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.4</version>
+                <version>3.6.0</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -66,6 +66,12 @@
             <groupId>com.destroystokyo.paper</groupId>
             <artifactId>paper-api</artifactId>
             <version>1.16.5-R0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.ssomar.score</groupId>
+            <artifactId>SCore</artifactId>
+            <version>5.26.1.18</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

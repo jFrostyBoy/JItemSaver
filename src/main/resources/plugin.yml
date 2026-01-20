@@ -1,0 +1,16 @@
+name: JItemSaver
+version: '${project.version}'
+main: jfbdev.jitemsaver.JItemSaver
+api-version: '1.16'
+authors: [ jFrostyBoy ]
+description: Сохранение указанных предметов после смерти игрока
+
+commands:
+  jisreload:
+    description: Перезагрузка плагина
+    usage: /jisreload
+    permission: jitemsaver.reload
+
+permissions:
+  jitemsaver.reload:
+    default: op

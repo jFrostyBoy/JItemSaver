@@ -1,0 +1,13 @@
+messages:
+  no-permission: "&4✗ &cНедостаточно прав &fдля использования команды"
+  reload: "&2✔ &fПлагин успешно &aперезагружен"
+  itemsaver-message: "&2✔ &fПредметы были сохранены &7(&a{count} &7шт.)"
+
+# Список предметов для сохранения
+itemsaver-list:
+  - DIAMOND
+  - NETHERITE_SWORD;SHARPNESS:5,MENDING:1
+  - TOTEM_OF_UNDYING
+  - DIAMOND_SWORD
+  - ELYTRA
+  # и т.д.

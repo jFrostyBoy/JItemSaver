@@ -3,7 +3,7 @@
 **Ядро**: Paper / Spigot  
 **Версия**: 1.16.5 - 1.21.11  
 **Java**: 16+  
-**Зависимости**: ExecutableItems, SCore
+**Зависимости**: ExecutableItems, SCore, LuckPerms
 
 ### Возможности
 - Сохраненение предмета

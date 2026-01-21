@@ -10,6 +10,7 @@
 - Сохранение предмета с указанными зачарованиями и их уровнями
 - Сохраненение кастомных предметов (ExecutableItems)
 - Установка слота сохранения для предмета (описано в `config.yml`)
+- Сохранение предметов под разные донат-группы
 
 ### Установка
 1. Скачай `JItemSaver-v1.0.jar`
@@ -58,12 +59,14 @@ messages:
 # Если слот НЕ указан — предмет проверяется во всех слотах (инвентарь + броня + оффхенд)
 
 itemsaver-list:
-  - TOTEM_OF_UNDYING
-  - NETHERITE_SWORD;SHARPNESS:5,MENDING:1
-  - GOLDEN_APPLE:OFFHAND
-  - DIAMOND_HELMET:HEAD
-  - CUSTOM:super_sword
-  # и т.д.
+  default:
+    - TOTEM_OF_UNDYING
+    - GOLDEN_APPLE:OFFHAND
+    - DIAMOND
+  vip:
+    - NETHERITE_SWORD;SHARPNESS:5,MENDING:1
+    - ELYTRA
+    - CUSTOM:super_sword
 ```
 
 ### Формат записи предметов

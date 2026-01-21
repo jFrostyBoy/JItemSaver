@@ -4,7 +4,7 @@ main: jfbdev.jitemsaver.JItemSaver
 api-version: '1.16'
 authors: [ jFrostyBoy ]
 description: Сохранение указанных предметов после смерти игрока
-softdepend: [ExecutableItems, SCore]
+softdepend: [ExecutableItems, SCore, LuckPerms]
 
 commands:
   jisreload:

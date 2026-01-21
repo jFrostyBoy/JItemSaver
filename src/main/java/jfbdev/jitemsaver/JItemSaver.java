@@ -3,6 +3,7 @@ package jfbdev.jitemsaver;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
@@ -19,17 +20,22 @@ import com.ssomar.score.api.executableitems.config.ExecutableItemsManagerInterfa
 import com.ssomar.score.api.executableitems.config.ExecutableItemInterface;
 import org.jetbrains.annotations.NotNull;
 
+import net.luckperms.api.LuckPerms;
+import net.luckperms.api.LuckPermsProvider;
+import net.luckperms.api.model.user.User;
+
 import java.util.*;
 
 public final class JItemSaver extends JavaPlugin implements Listener {
 
-    private final Set<SavedItemMatcher> savedItems = new HashSet<>();
     private String msgNoPerm;
     private String msgReload;
     private String msgSaved;
 
     private boolean hasExecutableItems = false;
     private ExecutableItemsManagerInterface eiManager = null;
+
+    private final Map<String, Set<SavedItemMatcher>> groupItems = new HashMap<>();
 
     @Override
     public void onEnable() {
@@ -64,16 +70,25 @@ public final class JItemSaver extends JavaPlugin implements Listener {
         msgReload = cfg.getString("messages.reload", "&2✔ &fПлагин перезагружен");
         msgSaved = cfg.getString("messages.itemsaver-message", "&2✔ &fПредметы сохранены &7({count} шт.)");
 
-        savedItems.clear();
+        groupItems.clear();
 
-        List<String> list = cfg.getStringList("itemsaver-list");
-        for (String line : list) {
-            if (line == null || line.trim().isEmpty()) continue;
-            SavedItemMatcher matcher = SavedItemMatcher.fromString(line.trim());
-            if (matcher != null) {
-                savedItems.add(matcher);
-            } else {
-                getLogger().warning("Неверный формат предмета в конфиге: " + line);
+        ConfigurationSection section = cfg.getConfigurationSection("itemsaver-list");
+        if (section != null) {
+            for (String group : section.getKeys(false)) {
+                List<String> lines = section.getStringList(group);
+                Set<SavedItemMatcher> matchers = new HashSet<>();
+
+                for (String line : lines) {
+                    if (line == null || line.trim().isEmpty()) continue;
+                    SavedItemMatcher matcher = SavedItemMatcher.fromString(line.trim());
+                    if (matcher != null) {
+                        matchers.add(matcher);
+                    } else {
+                        getLogger().warning("Неверный формат в группе " + group + ": " + line);
+                    }
+                }
+
+                groupItems.put(group.toLowerCase(), matchers);
             }
         }
     }
@@ -101,6 +116,10 @@ public final class JItemSaver extends JavaPlugin implements Listener {
         if (e.isCancelled()) return;
         if (p.getHealth() > 0) return;
 
+        Set<SavedItemMatcher> activeMatchers = getActiveMatchersForPlayer(p);
+
+        if (activeMatchers.isEmpty()) return;
+
         List<ItemStack> toKeep = new ArrayList<>();
 
         ItemStack[] contents = p.getInventory().getContents();
@@ -115,8 +134,11 @@ public final class JItemSaver extends JavaPlugin implements Listener {
                                     (i == 36) ? "FEET" :
                                             (i == 40) ? "OFFHAND" : "INVENTORY";
 
-            if (shouldKeep(item, slotType)) {
-                toKeep.add(item.clone());
+            for (SavedItemMatcher matcher : activeMatchers) {
+                if (matcher.matches(item, slotType, this)) {
+                    toKeep.add(item.clone());
+                    break;
+                }
             }
         }
 
@@ -136,13 +158,15 @@ public final class JItemSaver extends JavaPlugin implements Listener {
         p.sendMessage(message);
     }
 
-    private boolean shouldKeep(ItemStack item, String slotType) {
-        if (item == null) return false;
+    private Set<SavedItemMatcher> getActiveMatchersForPlayer(Player player) {
+        LuckPerms lp = LuckPermsProvider.get();
 
-        for (SavedItemMatcher matcher : savedItems) {
-            if (matcher.matches(item, slotType, this)) return true;
-        }
-        return false;
+        User user = lp.getUserManager().getUser(player.getUniqueId());
+        if (user == null) return new HashSet<>();
+
+        String primaryGroup = user.getPrimaryGroup().toLowerCase();
+
+        return groupItems.getOrDefault(primaryGroup, new HashSet<>());
     }
 
     private String color(String s) {

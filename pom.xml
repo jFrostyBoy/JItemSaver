@@ -6,7 +6,7 @@
 
     <groupId>jfbdev</groupId>
     <artifactId>JItemSaver</artifactId>
-    <version>v1.1</version>
+    <version>v1.2</version>
     <packaging>jar</packaging>
 
     <name>JItemSaver</name>
@@ -72,6 +72,12 @@
             <groupId>com.ssomar.score</groupId>
             <artifactId>SCore</artifactId>
             <version>5.26.1.18</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.luckperms</groupId>
+            <artifactId>api</artifactId>
+            <version>5.5</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
